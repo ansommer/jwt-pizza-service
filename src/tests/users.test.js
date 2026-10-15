@@ -73,3 +73,9 @@ test('delete a user', async () => {
   expect(response.status).toBe(200);
   expect(response.body.message).toBe('user deleted');
 });
+
+test('delete users unauthorized', async () => {
+  const deleteUserResponse = await request(app)
+    .delete(`/api/user/${diner.id}`)
+  expect(deleteUserResponse.status).toBe(401);
+});
