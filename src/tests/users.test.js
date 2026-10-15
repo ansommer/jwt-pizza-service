@@ -63,6 +63,13 @@ async function registerUser(service) {
 }
 
 test('delete a user', async () => {
-  const deleteUserRes = await request(app).delete('/api/user/ + diner.id')
-  expect(deleteUserRes.status).toBe(200);
+  const admin = await createAdminUser();
+  const adminToken = await authenticateUser(admin);
+
+  const response = await request(app)
+    .delete(`/api/user/${diner.id}`)
+    .set('Authorization', `Bearer ${adminToken}`);
+
+  expect(response.status).toBe(200);
+  expect(response.body.message).toBe('user deleted');
 });
