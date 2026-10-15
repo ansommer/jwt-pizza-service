@@ -43,16 +43,46 @@ test('list users unauthorized', async () => {
 });
 
 test('list users', async () => {
-  const [, userToken] = await registerUser(request(app));
+  const [user, userToken] = await registerUser(request(app), `pizza-${randomName()}`);
   const listUsersRes = await request(app)
-    .get('/api/user')
+    .get(`/api/user?page=1&limit=10&name=${encodeURIComponent(user.name)}`)
     .set('Authorization', 'Bearer ' + userToken);
   expect(listUsersRes.status).toBe(200);
+  expect(listUsersRes.body.users).toHaveLength(1);
+  expect(listUsersRes.body.users[0]).toMatchObject({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    roles: [{ role: 'diner' }],
+  });
+  expect(listUsersRes.body.users[0]).not.toHaveProperty('password');
+  expect(listUsersRes.body.more).toBe(false);
 });
 
-async function registerUser(service) {
+test('list users supports pagination and wildcard name filtering', async () => {
+  const namePrefix = `pizza-${randomName()}`;
+  const [firstUser, userToken] = await registerUser(request(app), `${namePrefix}-first`);
+  const [secondUser] = await registerUser(request(app), `${namePrefix}-second`);
+  const nameFilter = encodeURIComponent(`${namePrefix}-*`);
+
+  const firstPage = await request(app)
+    .get(`/api/user?page=1&limit=1&name=${nameFilter}`)
+    .set('Authorization', `Bearer ${userToken}`);
+  expect(firstPage.status).toBe(200);
+  expect(firstPage.body.users.map((listedUser) => listedUser.id)).toEqual([firstUser.id]);
+  expect(firstPage.body.more).toBe(true);
+
+  const secondPage = await request(app)
+    .get(`/api/user?page=2&limit=1&name=${nameFilter}`)
+    .set('Authorization', `Bearer ${userToken}`);
+  expect(secondPage.status).toBe(200);
+  expect(secondPage.body.users.map((listedUser) => listedUser.id)).toEqual([secondUser.id]);
+  expect(secondPage.body.more).toBe(false);
+});
+
+async function registerUser(service, name = 'pizza diner') {
   const testUser = {
-    name: 'pizza diner',
+    name,
     email: `${randomName()}@test.com`,
     password: 'a',
   };
