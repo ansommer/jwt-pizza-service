@@ -36,3 +36,8 @@ test('prevents a diner from updating another user', async () => {
     .send({ name: 'unauthorized change' });
   expect(response.status).toBe(403);
 });
+
+test('list users', async () => {
+  const listUsersRes = await request(app).get('/api/user');
+  expect(listUsersRes.status).toBe(200);
+});
