@@ -62,3 +62,7 @@ async function registerUser(service) {
   return [registerRes.body.user, registerRes.body.token];
 }
 
+test('delete a user', async () => {
+  const deleteUserRes = await request(app).delete('/api/user/ + diner.id')
+  expect(deleteUserRes.status).toBe(200);
+});
