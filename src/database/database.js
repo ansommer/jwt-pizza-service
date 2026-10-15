@@ -75,6 +75,61 @@ class DB {
     }
   }
 
+  async getUsers(page = 1, limit = config.db.listPerPage, nameFilter = '*') {
+    const pageNumber = Number(page);
+    const pageLimit = Number(limit);
+    if (
+      !Number.isSafeInteger(pageNumber) ||
+      pageNumber < 1 ||
+      !Number.isSafeInteger(pageLimit) ||
+      pageLimit < 1 ||
+      pageLimit >= Number.MAX_SAFE_INTEGER
+    ) {
+      throw new StatusCodeError('page and limit must be positive integers', 400);
+    }
+    if (!Number.isSafeInteger((pageNumber - 1) * pageLimit)) {
+      throw new StatusCodeError('page and limit are too large', 400);
+    }
+    if (typeof nameFilter !== 'string') {
+      throw new StatusCodeError('name must be a string', 400);
+    }
+
+    const offset = (pageNumber - 1) * pageLimit;
+    const namePattern = nameFilter.replace(/\*/g, '%');
+    const connection = await this.getConnection();
+    try {
+      const userRows = await this.query(
+        connection,
+        `SELECT id, name, email FROM user WHERE name LIKE ? ORDER BY id LIMIT ? OFFSET ?`,
+        [namePattern, pageLimit + 1, offset]
+      );
+      const more = userRows.length > pageLimit;
+      const users = userRows.slice(0, pageLimit);
+      if (users.length === 0) {
+        return { users, more };
+      }
+
+      const roleRows = await this.query(
+        connection,
+        `SELECT userId, role, objectId FROM userRole WHERE userId IN (${users.map(() => '?').join(',')})`,
+        users.map((user) => user.id)
+      );
+      const rolesByUser = new Map();
+      for (const role of roleRows) {
+        const roles = rolesByUser.get(role.userId) || [];
+        roles.push({ objectId: role.objectId || undefined, role: role.role });
+        rolesByUser.set(role.userId, roles);
+      }
+
+      return {
+        users: users.map((user) => ({ ...user, roles: rolesByUser.get(user.id) || [] })),
+        more,
+      };
+    } finally {
+      connection.end();
+    }
+  }
+
   async updateUser(userId, name, email, password) {
     const connection = await this.getConnection();
     try {

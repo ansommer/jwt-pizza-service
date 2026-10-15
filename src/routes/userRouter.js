@@ -37,6 +37,7 @@ userRouter.docs = [
           roles: [{ role: 'admin' }],
         },
       ],
+      more: true,
     },
   },
   {
@@ -63,7 +64,7 @@ userRouter.get(
   '/',
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
-    res.json({});
+    res.json(await DB.getUsers(req.query.page, req.query.limit, req.query.name));
   }),
 );
 
