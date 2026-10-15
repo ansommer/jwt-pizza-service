@@ -104,6 +104,27 @@ test('delete a user', async () => {
   expect(response.body.message).toBe('user deleted');
 });
 
+test('deleting a user removes them from the user list', async () => {
+  const userToDelete = await createDinerUser();
+  const adminToken = await authenticateUser(admin);
+  const usersUrl = `/api/user?page=1&limit=10&name=${encodeURIComponent(userToDelete.name)}`;
+
+  const beforeDelete = await request(app)
+    .get(usersUrl)
+    .set('Authorization', `Bearer ${adminToken}`);
+  expect(beforeDelete.body.users.map((user) => user.id)).toContain(userToDelete.id);
+
+  const deleteResponse = await request(app)
+    .delete(`/api/user/${userToDelete.id}`)
+    .set('Authorization', `Bearer ${adminToken}`);
+  expect(deleteResponse.status).toBe(200);
+
+  const afterDelete = await request(app)
+    .get(usersUrl)
+    .set('Authorization', `Bearer ${adminToken}`);
+  expect(afterDelete.body.users.map((user) => user.id)).not.toContain(userToDelete.id);
+});
+
 test('delete users unauthorized', async () => {
   const deleteUserResponse = await request(app)
     .delete(`/api/user/${diner.id}`);
