@@ -1,5 +1,5 @@
 const express = require('express');
-const { asyncHandler } = require('../endpointHelper.js');
+const { asyncHandler, StatusCodeError } = require('../endpointHelper.js');
 const { DB, Role } = require('../database/database.js');
 const { authRouter, setAuth } = require('./authRouter.js');
 
@@ -44,7 +44,7 @@ userRouter.docs = [
     method: 'DELETE',
     path: '/api/user/:userId',
     requiresAuth: true,
-    description: 'Deletes a user',
+    description: 'Deletes a user (admin only)',
     example: `curl -X DELETE localhost:3000/api/user/exampleuserid -H 'Authorization: Bearer tttttt'`,
     response: { message: 'user deleted' },
   },
@@ -91,6 +91,16 @@ userRouter.delete(
   '/:userId',
   authRouter.authenticateToken,
   asyncHandler(async (req, res) => {
+    if (!req.user.isRole(Role.Admin)) {
+      throw new StatusCodeError('unauthorized', 403);
+    }
+
+    const userId = Number(req.params.userId);
+    if (!Number.isSafeInteger(userId) || userId < 1) {
+      throw new StatusCodeError('invalid user id', 400);
+    }
+
+    await DB.deleteUser(userId);
     res.json({ message: 'user deleted' });
   })
 );
