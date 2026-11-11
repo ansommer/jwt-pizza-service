@@ -2,6 +2,25 @@ const config = require('./config');
 const os = require('os');
 const si = require('systeminformation');
 
+const requests = {
+  total: 0,
+  GET: 0,
+  PUT: 0,
+  POST: 0,
+  DELETE: 0,
+};
+
+function requestTracker(req, res, next) {
+  requests.total++;
+
+  if (requests[req.method] !== undefined) {
+    requests[req.method]++;
+  }
+
+  next();
+}
+
+
 
 async function getCpuUsagePercentage() {
   const cpu = await si.currentLoad();
@@ -56,7 +75,10 @@ async function sendMetricsPeriodically(period) {
         const metrics = [];
         metrics.push(createMetric('cpu_percent', cpu, '%', 'gauge', 'asDouble', {}));
         metrics.push(createMetric('memory_percent', getMemoryUsagePercentage(), '%', 'gauge', 'asDouble', {}));
-
+        Object.keys(requests).forEach((method) => {
+          metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
+        });
+        
         sendMetricToGrafana(metrics);
       } catch (error) {
         console.log('Error sending metrics', error);
@@ -95,4 +117,5 @@ function sendMetricToGrafana(metrics) {
 
 module.exports = {
   sendMetricsPeriodically,
+  requestTracker
 };
