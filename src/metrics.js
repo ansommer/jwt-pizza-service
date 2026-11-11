@@ -20,6 +20,49 @@ function requestTracker(req, res, next) {
   next();
 }
 
+const startTimeUnixNano = Date.now() * 1000000;
+const latencyBounds = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+function createHistogram() {
+  return {
+    count: 0,
+    sum: 0,
+    bucketCounts: new Array(latencyBounds.length + 1).fill(0),
+  };
+}
+
+function recordLatency(histogram, ms) {
+  histogram.count++;
+  histogram.sum += ms;
+  let i = latencyBounds.findIndex((bound) => ms <= bound);
+  if (i === -1) i = latencyBounds.length;
+  histogram.bucketCounts[i]++;
+}
+
+function histogramValue(histogram) {
+  return {
+    startTimeUnixNano,
+    count: histogram.count,
+    sum: histogram.sum,
+    bucketCounts: [...histogram.bucketCounts],
+    explicitBounds: latencyBounds,
+  };
+}
+
+const serviceLatency = createHistogram();
+const pizzaCreationLatency = createHistogram();
+
+function latencyTracker(req, res, next) {
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    recordLatency(serviceLatency, Number(process.hrtime.bigint() - start) / 1e6);
+  });
+  next();
+}
+
+function pizzaLatency(ms) {
+  recordLatency(pizzaCreationLatency, ms);
+}
+
 const authAttempts = {
   success: 0,
   failure: 0,
@@ -73,7 +116,7 @@ function createMetric(metricName, metricValue, metricUnit, metricType, valueType
     [metricType]: {
       dataPoints: [
         {
-          [valueType]: metricValue,
+          ...(metricType === 'histogram' ? metricValue : { [valueType]: metricValue }),
           timeUnixNano: Date.now() * 1000000,
           attributes: [],
         },
@@ -91,6 +134,10 @@ function createMetric(metricName, metricValue, metricUnit, metricType, valueType
   if (metricType === 'sum') {
     metric[metricType].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
     metric[metricType].isMonotonic = true;
+  }
+
+  if (metricType === 'histogram') {
+    metric[metricType].aggregationTemporality = 'AGGREGATION_TEMPORALITY_CUMULATIVE';
   }
 
   return metric;
@@ -112,6 +159,8 @@ async function sendMetricsPeriodically(period) {
         metrics.push(createMetric('pizzas_sold', pizzaStats.sold, '1', 'sum', 'asInt', {}));
         metrics.push(createMetric('pizza_creation_failures', pizzaStats.creationFailures, '1', 'sum', 'asInt', {}));
         metrics.push(createMetric('revenue', pizzaStats.revenue, '1', 'sum', 'asDouble', {}));
+        metrics.push(createMetric('service_latency_millisecond', histogramValue(serviceLatency), 'ms', 'histogram', null, {}));
+        metrics.push(createMetric('pizza_creation_latency_millisecond', histogramValue(pizzaCreationLatency), 'ms', 'histogram', null, {}));
 
         sendMetricToGrafana(metrics);
       } catch (error) {
@@ -152,6 +201,8 @@ function sendMetricToGrafana(metrics) {
 module.exports = {
   sendMetricsPeriodically,
   requestTracker,
+  latencyTracker,
+  pizzaLatency,
   authSuccess,
   authFailure,
   pizzaSold,

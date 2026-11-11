@@ -9,6 +9,7 @@ const metrics = require('./metrics');
 
 const app = express();
 app.use(metrics.requestTracker);
+app.use(metrics.latencyTracker);
 app.use(express.json());
 app.use(setAuthUser);
 app.use((req, res, next) => {

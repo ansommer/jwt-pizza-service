@@ -80,6 +80,7 @@ orderRouter.post(
   asyncHandler(async (req, res) => {
     const orderReq = req.body;
     let order, r, j;
+    const start = process.hrtime.bigint();
     try {
       order = await DB.addDinerOrder(req.user, orderReq);
       r = await fetch(`${config.factory.url}/api/order`, {
@@ -93,6 +94,7 @@ orderRouter.post(
       throw err;
     }
     if (r.ok) {
+      metrics.pizzaLatency(Number(process.hrtime.bigint() - start) / 1e6);
       metrics.pizzaSold(order.items);
       res.send({ order, followLinkToEndChaos: j.reportUrl, jwt: j.jwt });
     } else {
