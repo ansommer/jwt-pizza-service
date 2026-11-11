@@ -33,6 +33,22 @@ function authFailure() {
   authAttempts.failure++;
 }
 
+const pizzaStats = {
+  sold: 0,
+  creationFailures: 0,
+  revenue: 0,
+};
+
+function pizzaSold(items) {
+  items.forEach((item) => {
+    pizzaStats.sold++;
+    pizzaStats.revenue += Number(item.price) || 0;
+  });
+}
+
+function pizzaCreationFailure() {
+  pizzaStats.creationFailures++;
+}
 
 
 async function getCpuUsagePercentage() {
@@ -81,7 +97,7 @@ function createMetric(metricName, metricValue, metricUnit, metricType, valueType
 }
 
 async function sendMetricsPeriodically(period) {
-    //const timer = 
+    //const timer = in case I need a timer
     setInterval(async () => {
       try {
         const cpu = await getCpuUsagePercentage();
@@ -93,7 +109,10 @@ async function sendMetricsPeriodically(period) {
         });
         metrics.push(createMetric('authentication_success', authAttempts.success, '1', 'sum', 'asInt', {}));
         metrics.push(createMetric('authentication_failure', authAttempts.failure, '1', 'sum', 'asInt', {}));
-        
+        metrics.push(createMetric('pizzas_sold', pizzaStats.sold, '1', 'sum', 'asInt', {}));
+        metrics.push(createMetric('pizza_creation_failures', pizzaStats.creationFailures, '1', 'sum', 'asInt', {}));
+        metrics.push(createMetric('revenue', pizzaStats.revenue, '1', 'sum', 'asDouble', {}));
+
         sendMetricToGrafana(metrics);
       } catch (error) {
         console.log('Error sending metrics', error);
@@ -134,5 +153,7 @@ module.exports = {
   sendMetricsPeriodically,
   requestTracker,
   authSuccess,
-  authFailure
+  authFailure,
+  pizzaSold,
+  pizzaCreationFailure,
 };
