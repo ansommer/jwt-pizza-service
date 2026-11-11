@@ -14,7 +14,8 @@
     "bcrypt": "^6.0.0",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
-    "mysql2": "^3.9.7"
+    "mysql2": "^3.9.7",
+    "systeminformation": "^5.33.19"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
