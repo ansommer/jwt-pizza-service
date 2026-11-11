@@ -63,6 +63,26 @@ function pizzaLatency(ms) {
   recordLatency(pizzaCreationLatency, ms);
 }
 
+const ACTIVE_USER_WINDOW_MS = 5 * 60 * 1000;
+const activeUsers = new Map(); // userId -> last request time (ms)
+
+function activeUserTracker(req, res, next) {
+  if (req.user && req.user.id !== undefined) {
+    activeUsers.set(req.user.id, Date.now());
+  }
+  next();
+}
+
+function getActiveUserCount() {
+  const cutoff = Date.now() - ACTIVE_USER_WINDOW_MS;
+  activeUsers.forEach((lastSeen, userId) => {
+    if (lastSeen < cutoff) {
+      activeUsers.delete(userId);
+    }
+  });
+  return activeUsers.size;
+}
+
 const authAttempts = {
   success: 0,
   failure: 0,
@@ -151,6 +171,7 @@ async function sendMetricsPeriodically(period) {
         const metrics = [];
         metrics.push(createMetric('cpu_percent', cpu, '%', 'gauge', 'asDouble', {}));
         metrics.push(createMetric('memory_percent', getMemoryUsagePercentage(), '%', 'gauge', 'asDouble', {}));
+        metrics.push(createMetric('active_users', getActiveUserCount(), '1', 'gauge', 'asInt', {}));
         Object.keys(requests).forEach((method) => {
           metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
         });
@@ -203,6 +224,7 @@ module.exports = {
   requestTracker,
   latencyTracker,
   pizzaLatency,
+  activeUserTracker,
   authSuccess,
   authFailure,
   pizzaSold,
