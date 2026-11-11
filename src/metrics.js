@@ -20,6 +20,19 @@ function requestTracker(req, res, next) {
   next();
 }
 
+const authAttempts = {
+  success: 0,
+  failure: 0,
+};
+
+function authSuccess() {
+  authAttempts.success++;
+}
+
+function authFailure() {
+  authAttempts.failure++;
+}
+
 
 
 async function getCpuUsagePercentage() {
@@ -78,6 +91,8 @@ async function sendMetricsPeriodically(period) {
         Object.keys(requests).forEach((method) => {
           metrics.push(createMetric('requests', requests[method], '1', 'sum', 'asInt', { method }));
         });
+        metrics.push(createMetric('authentication_success', authAttempts.success, '1', 'sum', 'asInt', {}));
+        metrics.push(createMetric('authentication_failure', authAttempts.failure, '1', 'sum', 'asInt', {}));
         
         sendMetricToGrafana(metrics);
       } catch (error) {
@@ -117,5 +132,7 @@ function sendMetricToGrafana(metrics) {
 
 module.exports = {
   sendMetricsPeriodically,
-  requestTracker
+  requestTracker,
+  authSuccess,
+  authFailure
 };
