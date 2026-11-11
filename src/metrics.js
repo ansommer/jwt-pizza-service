@@ -49,23 +49,18 @@ function createMetric(metricName, metricValue, metricUnit, metricType, valueType
 }
 
 async function sendMetricsPeriodically(period) {
-    const timer = setInterval(async () => {
-    try {
-      const cpu = await getCpuUsagePercentage();
-      const metrics = [];
-      metrics.push(createMetric('cpu_percent', cpu, '%', 'gauge', 'asDouble', {}));
-      metrics.push(createMetric('memory_percent', getMemoryUsagePercentage(), '%', 'gauge', 'asDouble', {}));
-      
-    //   metrics.add(httpMetrics);
-    //   metrics.add(systemMetrics);
-    //   metrics.add(userMetrics);
-    //   metrics.add(purchaseMetrics);
-    //   metrics.add(authMetrics);
+    //const timer = 
+    setInterval(async () => {
+      try {
+        const cpu = await getCpuUsagePercentage();
+        const metrics = [];
+        metrics.push(createMetric('cpu_percent', cpu, '%', 'gauge', 'asDouble', {}));
+        metrics.push(createMetric('memory_percent', getMemoryUsagePercentage(), '%', 'gauge', 'asDouble', {}));
 
-      sendMetricToGrafana(metrics);
-    } catch (error) {
-      console.log('Error sending metrics', error);
-    }
+        sendMetricToGrafana(metrics);
+      } catch (error) {
+        console.log('Error sending metrics', error);
+      }
   }, period);
 }
 
