@@ -73,6 +73,11 @@ function activeUserTracker(req, res, next) {
   next();
 }
 
+// Logging out ends the session, so the user stops counting as active right away.
+function userLoggedOut(userId) {
+  activeUsers.delete(userId);
+}
+
 function getActiveUserCount() {
   const cutoff = Date.now() - ACTIVE_USER_WINDOW_MS;
   activeUsers.forEach((lastSeen, userId) => {
@@ -225,6 +230,7 @@ module.exports = {
   latencyTracker,
   pizzaLatency,
   activeUserTracker,
+  userLoggedOut,
   authSuccess,
   authFailure,
   pizzaSold,
