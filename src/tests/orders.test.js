@@ -1,4 +1,6 @@
 const request = require("supertest");
+const logger = require("../logger");
+jest.spyOn(logger, "sendLogToGrafana").mockImplementation(() => {});
 const app = require("../service");
 const { DB } = require("../database/database");
 const {
@@ -37,6 +39,7 @@ beforeAll(async () => {
 
 afterAll(() => {
   global.fetch = originalFetch;
+  jest.restoreAllMocks();
 });
 
 test("lists the menu and restricts menu updates to admins", async () => {
