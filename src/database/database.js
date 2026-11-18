@@ -4,6 +4,16 @@ const config = require('../config.js');
 const { StatusCodeError } = require('../endpointHelper.js');
 const { Role } = require('../model/model.js');
 const dbModel = require('./dbModel.js');
+const logger = require('../logger');
+
+function logQuery(sql) {
+  const safeSql = sql.replace(/'(?:''|[^'])*'/g, "'*****'");
+  logger.log('info', 'database', {
+    query: safeSql,
+    userId: logger.getCurrentUserId(),
+  });
+}
+
 class DB {
   constructor() {
     this.initialized = this.initializeDatabase();
@@ -372,12 +382,15 @@ class DB {
   }
 
   async query(connection, sql, params) {
+    logQuery(sql);
     const [results] = await connection.execute(sql, params);
     return results;
   }
 
   async getID(connection, key, value, table) {
-    const [rows] = await connection.execute(`SELECT id FROM ${table} WHERE ${key}=?`, [value]);
+    const sql = `SELECT id FROM ${table} WHERE ${key}=?`;
+    logQuery(sql);
+    const [rows] = await connection.execute(sql, [value]);
     if (rows.length > 0) {
       return rows[0].id;
     }

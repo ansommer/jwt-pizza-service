@@ -1,4 +1,5 @@
 const config = require('./config');
+const { AsyncLocalStorage } = require('node:async_hooks');
 
 function sanitize(value) {
   if (Array.isArray(value)) return value.map(sanitize);
@@ -20,8 +21,9 @@ function sanitize(value) {
 }
 
 class Logger {
+  requestContext = new AsyncLocalStorage();
+
   httpLogger = (req, res, next) => {
-    const logger = this;
     let responseBody;
     const send = res.send;
 
@@ -33,7 +35,7 @@ class Logger {
     res.on('finish', () => {
       const statusCode = res.statusCode;
       const level = statusCode >= 500 ? 'error' : statusCode >= 400 ? 'warn' : 'info';
-      logger.log(level, {
+      this.log(level, 'http', {
         method: req.method,
         path: req.originalUrl,
         statusCode,
@@ -44,19 +46,23 @@ class Logger {
       });
     });
 
-    next();
-  }
+    this.requestContext.run({ req }, next);
+  };
 
-  log(level, logData) {
+  log(level, type, logData) {
     const event = {
       streams: [
         {
-          stream: { component: config.logging.source, level, type: 'http' },
+          stream: { component: config.logging.source, level, type },
           values: [[(Date.now() * 1000000).toString(), JSON.stringify(sanitize(logData))]],
         },
       ],
     };
     this.sendLogToGrafana(event);
+  }
+
+  getCurrentUserId() {
+    return this.requestContext.getStore()?.req.user?.id ?? null;
   }
 
   sendLogToGrafana(event) {
