@@ -8,13 +8,13 @@ function sanitize(value) {
     return Object.fromEntries(
       Object.entries(value).map(([key, entry]) => [
         key,
-        /password|token|secret|authorization|api.?key/i.test(key) ? '*****' : sanitize(entry),
+        /password|token|jwt|secret|authorization|api.?key/i.test(key) ? '*****' : sanitize(entry),
       ]),
     );
   }
   if (typeof value === 'string') {
     return value
-      .replace(/("(?:password|token|secret|authorization|api.?key)"\s*:\s*)"[^"]*"/gi, '$1"*****"')
+      .replace(/("(?:password|token|jwt|secret|authorization|api.?key)"\s*:\s*)"[^"]*"/gi, '$1"*****"')
       .replace(/Bearer\s+\S+/gi, 'Bearer *****');
   }
   return value;
