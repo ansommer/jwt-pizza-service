@@ -53,6 +53,14 @@ app.use('*', (req, res) => {
 
 // Default error handler for all exceptions and errors.
 app.use((err, req, res, next) => {
+  logger.log('error', 'exception', {
+    name: err.name,
+    message: err.message,
+    method: req.method,
+    path: req.originalUrl,
+    statusCode: err.statusCode ?? 500,
+    userId: req.user?.id ?? null,
+  });
   res.status(err.statusCode ?? 500).json({ message: err.message, stack: err.stack });
   next();
 });
