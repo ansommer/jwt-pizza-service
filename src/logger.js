@@ -66,18 +66,21 @@ class Logger {
   }
 
   sendLogToGrafana(event) {
-    fetch(config.logging.endpointUrl, {
-      method: 'POST',
-      body: JSON.stringify(event),
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.logging.accountId}:${config.logging.apiKey}`,
-      },
-    }).then((response) => {
-      if (!response.ok) console.error('Failed to send log to Grafana');
-    }).catch(() => {
-      console.error('Failed to send log to Grafana');
-    });
+    Promise.resolve()
+      .then(() => fetch(config.logging.endpointUrl, {
+        method: 'POST',
+        body: JSON.stringify(event),
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.logging.accountId}:${config.logging.apiKey}`,
+        },
+      }))
+      .then((response) => {
+        if (response && !response.ok) console.error('Failed to send log to Grafana');
+      })
+      .catch(() => {
+        console.error('Failed to send log to Grafana');
+      });
   }
 }
 
